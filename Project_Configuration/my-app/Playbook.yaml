@@ -1,0 +1,47 @@
+- hosts: ansible_group
+  pre_tasks:
+    - name: 'sytem init'
+      include_tasks: docker-install.yml
+
+  task:
+  #Create dockernetwork
+    - name: 'Create docker network'
+      become: yes
+      docker_network:
+        name: my_network
+  # create Docker file
+    - name: create build directory
+      file:
+        path: /root/demo-dockerfile
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+    - name: copy Dockerfile
+      copy:
+        src: ./Dockerfile
+        dest: /root/demo-dockerfile/Dockerfile
+        owner: root
+        group: root
+        mode: '0644'
+    - name: build container image
+      docker_image:
+        name: democontainer:v1.0
+        build:
+          path: /root/demo-dockerfile
+          source: build
+        state: present
+  # Run Container
+  - name: 'Running container'
+    become: yes
+    docker_container:
+      name: 'RunContainer'
+      recreate: true
+      restart_policy: unless-stopped
+      image: 'democontainer:latest'
+      volume:
+        - /my-app
+      published_ports:
+        - '8080:8080'
+      networks:
+        - name: "my_network"
